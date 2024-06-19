@@ -5,15 +5,17 @@ import (
 	"birthday_bot/internal/handlers"
 	"birthday_bot/internal/middleware"
 	"birthday_bot/internal/storage"
+	"birthday_bot/internal/tgBot"
 	"github.com/gorilla/mux"
 	"log"
 	"net/http"
+	"sync"
+	"time"
 )
 
 var jwtKey = []byte("my_secret_key")
 
-func main() {
-
+func RunServer(address string) {
 	db := storage.New("host=localhost user=postgres password=postgres dbname=birthdays port=5432 sslmode=disable")
 	authProcess := auth.Auth{JWTKey: jwtKey, Db: db}
 
@@ -25,6 +27,30 @@ func main() {
 	protected.Use(middleware.AuthMiddleware(jwtKey))
 	protected.HandleFunc("/employees", handlers.GetEmployees(db)).Methods("GET")
 
-	log.Println("Server is running on port 8080")
-	log.Fatal(http.ListenAndServe(":8080", router))
+	log.Println("Server is running on " + address)
+	log.Fatal(http.ListenAndServe(address, router))
+}
+
+func RunBot(address string) {
+	log.Println("Starting tg bot")
+	bot := tgBot.NewBot("http://" + address)
+	bot.Start()
+}
+
+func main() {
+	address := "localhost:8080"
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		RunServer(address)
+	}()
+	time.Sleep(3 * time.Second)
+	go func() {
+		defer wg.Done()
+		RunBot(address)
+	}()
+
+	wg.Wait()
 }
