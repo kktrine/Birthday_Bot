@@ -6,7 +6,7 @@ type Employee struct {
 	Id               int       `gorm:"primaryKey, autoincrement:1"`
 	Name             string    `gorm:"size:50, not null"`
 	Surname          string    `gorm:"size:50, not null"`
-	Birth            time.Time `gorm:"type:date, not null"`
+	Birth            time.Time `gorm:"type:date not null"`
 	OrganizationName string    `gorm:"size:50"`
 }
 

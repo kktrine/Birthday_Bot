@@ -1,6 +1,9 @@
 package tgBot
 
 import (
+	"birthday_bot/internal/model"
+	"encoding/json"
+	"fmt"
 	tgbotapi "gopkg.in/telegram-bot-api.v4"
 )
 
@@ -11,6 +14,7 @@ func (b *Bot) handleSignIn(update tgbotapi.Update) {
 	}
 	username, _ := b.usernames[id]
 	password, _ := b.passwords[id]
+	fmt.Println(username, password)
 	token, err := b.signIn(username, password)
 	if err != nil {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Failed to sign in: "+err.Error())
@@ -24,8 +28,9 @@ func (b *Bot) handleSignIn(update tgbotapi.Update) {
 }
 
 func (b *Bot) handleSignUp(update tgbotapi.Update) {
-	username := "newuser"
-	password := "newpassword"
+	id := update.Message.Chat.ID
+	username, _ := b.usernames[id]
+	password, _ := b.passwords[id]
 	err := b.signUp(username, password)
 	if err != nil {
 		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Failed to sign up: "+err.Error())
@@ -46,11 +51,13 @@ func (b *Bot) handleGetEmployees(update tgbotapi.Update) {
 	}
 	data, err := b.getEmployees(token)
 	if err != nil {
-		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Failed to get employees: "+err.Error())
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Не удалось выполнить команду: "+err.Error())
 		b.bot.Send(msg)
 		return
 	}
-
-	msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Employees: "+string(data))
+	var people []model.Employee
+	json.Unmarshal(data, &people)
+	jsonMessage, err := json.MarshalIndent(people, "", "   ")
+	msg := tgbotapi.NewMessage(update.Message.Chat.ID, string(jsonMessage))
 	b.bot.Send(msg)
 }

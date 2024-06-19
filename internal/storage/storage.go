@@ -37,7 +37,14 @@ func (d Storage) Stop() error {
 }
 
 func (d Storage) GetEmployees() (*[]model.Employee, error) {
-	return nil, nil
+	var res []model.Employee
+	err := d.db.Model(&model.Employee{}).Find(&res).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+	}
+	return &res, nil
 }
 
 func (d Storage) CreateUser(username, password string) error {
