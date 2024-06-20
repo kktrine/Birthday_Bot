@@ -20,12 +20,15 @@ type Credentials struct {
 	Password string `json:"password"`
 	ChatId   int64  `json:"chatId"`
 }
-type AuthResponse struct {
-	Token string `json:"token"`
-}
 
-type SignInResponse struct {
-	Id int `json:"id"`
+//type signUpResponce struct {
+//	Token string `json:"token"`
+//	Id    int    `json:"id"`
+//}
+
+type signInResponse struct {
+	Id    int    `json:"id"`
+	Token string `json:"token"`
 }
 
 func NewBot(apiBaseURL string) *Bot {

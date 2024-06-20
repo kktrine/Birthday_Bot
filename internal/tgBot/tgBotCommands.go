@@ -9,52 +9,49 @@ import (
 	"net/http"
 )
 
-func (b *Bot) signIn(username, password string, chatId int64) (string, error) {
+func (b *Bot) signIn(username, password string, chatId int64) (string, int, error) {
 	credentials := Credentials{Username: username, Password: password, ChatId: chatId}
 	body, err := json.Marshal(credentials)
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
 
 	resp, err := http.Post(b.apiBaseURL+"/sign_in", "application/json", bytes.NewBuffer(body))
 	if err != nil {
-		return "", err
+		return "", 0, err
 	}
 	defer resp.Body.Close()
 
-	var authResponse AuthResponse
-	if err := json.NewDecoder(resp.Body).Decode(&authResponse); err != nil {
-		return "", err
+	var signInResp signInResponse
+	if err := json.NewDecoder(resp.Body).Decode(&signInResp); err != nil {
+		return "", 0, err
 	}
 
-	return authResponse.Token, nil
+	return signInResp.Token, signInResp.Id, nil
 }
 
-func (b *Bot) signUp(username, password string, chatId int64) (int, error) {
+func (b *Bot) signUp(username, password string, chatId int64) error {
 	credentials := Credentials{Username: username, Password: password, ChatId: chatId}
 	body, err := json.Marshal(credentials)
 	if err != nil {
-		return 0, err
+		return err
 	}
 
 	resp, err := http.Post(b.apiBaseURL+"/sign_up", "application/json", bytes.NewBuffer(body))
 	if err != nil {
-		return 0, err
+		return err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
 		respBody, err := io.ReadAll(resp.Body)
 		if err != nil {
-			return 0, errors.New("ошибка")
+			return errors.New("ошибка")
 		}
-		return 0, errors.New(string(respBody))
+		return errors.New(string(respBody))
 	}
-	var response SignInResponse
-	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
-		return 0, err
-	}
-	return response.Id, nil
+
+	return nil
 }
 
 func (b *Bot) getEmployees(token string) ([]byte, error) {

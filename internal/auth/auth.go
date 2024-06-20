@@ -63,12 +63,14 @@ func (h *Auth) SignIn(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	var res *model.User
-	res, err := h.Db.GetHashedPassword(user.Username)
+	password := user.Password
+	user, err = h.Db.GetHashedPassword(user.Username)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(user.Password))
+	hashedPassword := user.Password
+	chatId := user.ChatId
+	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 	if err != nil {
 		http.Error(w, "Неверный пароль", http.StatusUnauthorized)
 	}
@@ -89,7 +91,8 @@ func (h *Auth) SignIn(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
+	err = json.NewEncoder(w).Encode(map[string]interface{}{"token": tokenString, "id": user.Id})
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
