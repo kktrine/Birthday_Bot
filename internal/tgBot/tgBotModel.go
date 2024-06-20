@@ -148,7 +148,7 @@ func (b *Bot) getInfo(id int64) *model.Employee {
 		}
 		if res.UserId == nil {
 			idString := update.Message.Text
-			idInt, err := strconv.ParseInt(idString, 10, 64)
+			idInt, err := strconv.Atoi(idString)
 			if err != nil {
 				msg := tgbotapi.NewMessage(id, "Id не распознан. Введите id.\nВведите /exit, если хотите выйти")
 				b.bot.Send(msg)
@@ -228,7 +228,7 @@ func (b *Bot) periodSend(db *storage.Storage) {
 		next := time.Date(now.Year(), now.Month(), now.Day(), 10, 0, 0, 0, now.Location()).Add(24 * time.Hour)
 		pause := next.Sub(now)
 		time.Sleep(pause)
-		b.sendNotifications(time.Now(), db)
+		b.sendNotifications(db)
 	}
 }
 
