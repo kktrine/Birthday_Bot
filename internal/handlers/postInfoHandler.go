@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-func PostInfo(db *storage.Storage) func(http.ResponseWriter, *http.Request) {
+func PostInfoHandler(db *storage.Storage) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var person model.Employee
 		err := json.NewDecoder(r.Body).Decode(&person)

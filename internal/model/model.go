@@ -4,7 +4,7 @@ import "time"
 
 type Employee struct {
 	Id      int        `gorm:"primaryKey;autoincrement:1" json:"-"`
-	UserId  *int64     `gorm:"not null" json:"userId"`
+	UserId  *int64     `gorm:"not null;uniqueIndex" json:"userId"`
 	Name    string     `gorm:"size:50;not null" json:"name"`
 	Surname string     `gorm:"size:50;not null" json:"surname"`
 	Birth   *time.Time `gorm:"type:date not null" json:"birth"`
@@ -16,7 +16,7 @@ type Subscription struct {
 	UserId       int       `gorm:"not null"`
 	SubscribedTo int       `gorm:"not null"`
 	User         *User     `gorm:"foreignKey:UserId;references:Id"`
-	Employee     *Employee `gorm:"foreignKey:SubscribedTo;references:Id"`
+	Employee     *Employee `gorm:"foreignKey:SubscribedTo;references:UserId"`
 }
 
 type User struct {
@@ -24,4 +24,9 @@ type User struct {
 	Username string `gorm:"size:50;uniqueIndex;not null" json:"username"`
 	Password string `gorm:"size:100;not null" json:"password"`
 	ChatId   *int64 `gorm:"uniqueIndex" json:"chatId"`
+}
+
+type Subscribe struct {
+	Id          *int   `json:"id"`
+	SubscribeTo *[]int `json:"subscribeTo"`
 }

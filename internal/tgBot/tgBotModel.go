@@ -85,6 +85,15 @@ func (b *Bot) Start() {
 				msg := tgbotapi.NewMessage(id, "Ошибка: данные не заполнены")
 				b.bot.Send(msg)
 			}
+		case "subscribe":
+			ids := b.getIds(id)
+			if ids != nil {
+				b.handleSubscribe(update, *ids)
+			} else {
+				msg := tgbotapi.NewMessage(id, "Ошибка: данные не заполнены")
+				b.bot.Send(msg)
+			}
+
 		default:
 			msg := tgbotapi.NewMessage(id, "Неизвестная команда")
 			b.bot.Send(msg)
@@ -169,6 +178,43 @@ func (b *Bot) getInfo(id int64) *model.Employee {
 
 			}
 
+		}
+	}
+	return &res
+}
+
+func (b *Bot) getIds(id int64) *model.Subscribe {
+	res := model.Subscribe{}
+	ids := make([]int, 0)
+	msg := tgbotapi.NewMessage(id, "Введите Ваш id или /exit, чтобы закончить ввод")
+	b.bot.Send(msg)
+	for update := range b.updates {
+		if update.Message == nil {
+			continue
+		}
+		if update.Message.Command() == "exit" {
+			if len(ids) > 0 {
+				res.SubscribeTo = &ids
+				return &res
+			}
+			return nil
+		} else if update.Message.Command() != "" {
+			msg := tgbotapi.NewMessage(id, "Неверная команда.\nВведите /exit, если хотите закончить ввод")
+			b.bot.Send(msg)
+		}
+		currentIdString := update.Message.Text
+		currentIdInt, err := strconv.Atoi(currentIdString)
+		if err != nil {
+			msg := tgbotapi.NewMessage(id, "Неверный id.\nВведите верный id или /exit, если хотите закончить ввод")
+			b.bot.Send(msg)
+		} else if res.Id == nil {
+			res.Id = &currentIdInt
+			msg := tgbotapi.NewMessage(id, "id принят.\nВведите id пользователя, на которого хотите подписаться или /exit, чтобы выйти")
+			b.bot.Send(msg)
+		} else {
+			ids = append(ids, currentIdInt)
+			msg := tgbotapi.NewMessage(id, "id принят.\nВведите еще id или /exit, чтобы выйти")
+			b.bot.Send(msg)
 		}
 	}
 	return &res

@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-func GetEmployees(db *storage.Storage) func(http.ResponseWriter, *http.Request) {
+func GetEmployeesHandler(db *storage.Storage) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		employees, err := db.GetEmployees()
 		if err != nil {

@@ -99,3 +99,34 @@ func (d Storage) AddInfo(info model.Employee) error {
 	}
 	return nil
 }
+
+func (d Storage) Subscribe(data model.Subscribe) error {
+	tx := d.db.Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
+	var num int64
+	tx.Model(&model.User{}).Where("id = (?)", data.Id).Count(&num)
+	if num == 0 {
+		return errors.New("пользователь с этим id не найден")
+	}
+	tx.Model(&model.User{}).Where("id in ?", *data.SubscribeTo).Count(&num)
+	if num != int64(len(*data.SubscribeTo)) {
+		return errors.New("один или несколько пользователей для подписки не найдены")
+	}
+	requests := make([]model.Subscription, len(*data.SubscribeTo))
+	for i, id := range *data.SubscribeTo {
+		requests[i].UserId = *data.Id
+		requests[i].SubscribedTo = id
+	}
+	err := tx.Create(requests).Error
+	if err != nil {
+		return err
+	}
+	tx.Commit()
+	if tx.Error != nil {
+		return err
+	}
+	return nil
+
+}
