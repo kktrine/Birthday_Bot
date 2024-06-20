@@ -20,6 +20,10 @@ type Auth struct {
 	Db     *storage.Storage
 }
 
+type RegisterResponse struct {
+	Id int `json:"id"`
+}
+
 func (h *Auth) Register(w http.ResponseWriter, r *http.Request) {
 	var user model.User
 	err := json.NewDecoder(r.Body).Decode(&user)
@@ -42,8 +46,13 @@ func (h *Auth) Register(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	w.WriteHeader(http.StatusCreated)
+	w.Header().Set("Content-Type", "application/json")
+	//err = json.NewEncoder(w).Encode(map[string]int{"id": id})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
 }
 
@@ -54,7 +63,8 @@ func (h *Auth) SignIn(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	hashedPassword, chatId, err := h.Db.GetHashedPassword(user.Username)
+	var res *model.User
+	res, err := h.Db.GetHashedPassword(user.Username)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}

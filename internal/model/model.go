@@ -3,11 +3,12 @@ package model
 import "time"
 
 type Employee struct {
-	Id               int       `gorm:"primaryKey;autoincrement:1"`
-	Name             string    `gorm:"size:50;not null"`
-	Surname          string    `gorm:"size:50;not null"`
-	Birth            time.Time `gorm:"type:date not null"`
-	OrganizationName string    `gorm:"size:50"`
+	Id      int        `gorm:"primaryKey;autoincrement:1" json:"-"`
+	UserId  *int64     `gorm:"not null" json:"userId"`
+	Name    string     `gorm:"size:50;not null" json:"name"`
+	Surname string     `gorm:"size:50;not null" json:"surname"`
+	Birth   *time.Time `gorm:"type:date not null" json:"birth"`
+	User    *User      `gorm:"foreignKey:UserId;references:Id" json:"-"`
 }
 
 type Subscription struct {
@@ -19,9 +20,8 @@ type Subscription struct {
 }
 
 type User struct {
-	Id         int    `gorm:"primaryKey;autoincrement" json:"-"`
-	EmployeeId int    `gorm:"foreignKey:Id" json:"-"`
-	Username   string `gorm:"size:50;uniqueIndex;not null" json:"username"`
-	Password   string `gorm:"size:100;not null" json:"password"`
-	ChatId     *int64 `gorm:"uniqueIndex" json:"chatId"`
+	Id       int    `gorm:"primaryKey;autoincrement" json:"-"`
+	Username string `gorm:"size:50;uniqueIndex;not null" json:"username"`
+	Password string `gorm:"size:100;not null" json:"password"`
+	ChatId   *int64 `gorm:"uniqueIndex" json:"chatId"`
 }

@@ -1,8 +1,11 @@
 package tgBot
 
 import (
+	"birthday_bot/internal/model"
 	tgbotapi "gopkg.in/telegram-bot-api.v4"
 	"log"
+	"strconv"
+	"time"
 )
 
 type Bot struct {
@@ -19,6 +22,10 @@ type Credentials struct {
 }
 type AuthResponse struct {
 	Token string `json:"token"`
+}
+
+type SignInResponse struct {
+	Id int `json:"id"`
 }
 
 func NewBot(apiBaseURL string) *Bot {
@@ -47,7 +54,7 @@ func (b *Bot) Start() {
 		id := update.Message.Chat.ID
 		switch update.Message.Command() {
 		case "start":
-			msg := tgbotapi.NewMessage(id, "Привет! Выбери команду:\n/signin\n/signup\n/employees")
+			msg := tgbotapi.NewMessage(id, "Привет! Выбери команду в меню.")
 			b.bot.Send(msg)
 		case "signin":
 			user, password := b.getUsernamePassword(id)
@@ -67,6 +74,14 @@ func (b *Bot) Start() {
 			}
 		case "employees":
 			b.handleGetEmployees(update)
+		case "info":
+			info := b.getInfo(id)
+			if info != nil {
+				b.handleInfo(update, info)
+			} else {
+				msg := tgbotapi.NewMessage(id, "Ошибка: данные не заполнены")
+				b.bot.Send(msg)
+			}
 		default:
 			msg := tgbotapi.NewMessage(id, "Неизвестная команда")
 			b.bot.Send(msg)
@@ -101,4 +116,57 @@ func (b *Bot) getUsernamePassword(id int64) (string, string) {
 		}
 	}
 	return username, password
+}
+
+func (b *Bot) getInfo(id int64) *model.Employee {
+	res := model.Employee{}
+	msg := tgbotapi.NewMessage(id, "Введите id или /exit, чтобы выйти")
+	b.bot.Send(msg)
+	for update := range b.updates {
+		if update.Message == nil {
+			continue
+		}
+		if update.Message.Command() == "exit" {
+			return nil
+		} else if update.Message.Command() != "" {
+			msg := tgbotapi.NewMessage(id, "Неверная команда.\nВведите /exit, если хотите выйти")
+			b.bot.Send(msg)
+		}
+		if res.UserId == nil {
+			idString := update.Message.Text
+			idInt, err := strconv.ParseInt(idString, 10, 64)
+			if err != nil {
+				msg := tgbotapi.NewMessage(id, "Id не распознан. Введите id.\nВведите /exit, если хотите выйти")
+				b.bot.Send(msg)
+			} else {
+				msg := tgbotapi.NewMessage(id, "Id принят. Введите имя.\nВведите /exit, если хотите выйти")
+				b.bot.Send(msg)
+				res.UserId = &idInt
+			}
+		} else if res.Name == "" {
+			res.Name = update.Message.Text
+			msg := tgbotapi.NewMessage(id, "Имя принято.\nВведите фамилию или /exit, чтобы выйти")
+			b.bot.Send(msg)
+		} else if res.Surname == "" {
+			res.Surname = update.Message.Text
+			msg := tgbotapi.NewMessage(id, "Фамилия принята.\nВведите дату рождения в формате дд.мм.гггг или /exit, чтобы выйти")
+			b.bot.Send(msg)
+		} else if res.Birth == nil {
+			dateStr := update.Message.Text
+			parsedDate, err := time.Parse("02.01.2006", dateStr)
+			if err != nil {
+				msg := tgbotapi.NewMessage(id, "Неверный ввод.\nВведите дату рождения в формате дд.мм.гггг или /exit, чтобы выйти")
+				b.bot.Send(msg)
+
+			} else {
+				msg := tgbotapi.NewMessage(id, "Дата рождения принята")
+				b.bot.Send(msg)
+				res.Birth = &parsedDate
+				return &res
+
+			}
+
+		}
+	}
+	return &res
 }
