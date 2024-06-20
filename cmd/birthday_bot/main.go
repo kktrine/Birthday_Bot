@@ -26,6 +26,7 @@ func RunServer(address string) {
 	protected := router.PathPrefix("/api").Subrouter()
 	protected.Use(middleware.AuthMiddleware(jwtKey))
 	protected.HandleFunc("/employees", handlers.GetEmployees(db)).Methods("GET")
+	protected.HandleFunc("/info", handlers.PostCredentials(db)).Methods("POST")
 
 	log.Println("Server is running on " + address)
 	log.Fatal(http.ListenAndServe(address, router))

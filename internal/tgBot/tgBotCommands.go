@@ -4,13 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 )
 
-func (b *Bot) signIn(username, password string) (string, error) {
-	credentials := Credentials{Username: username, Password: password}
+func (b *Bot) signIn(username, password string, chatId int64) (string, error) {
+	credentials := Credentials{Username: username, Password: password, ChatId: chatId}
 	body, err := json.Marshal(credentials)
 	if err != nil {
 		return "", err
@@ -30,8 +29,8 @@ func (b *Bot) signIn(username, password string) (string, error) {
 	return authResponse.Token, nil
 }
 
-func (b *Bot) signUp(username, password string) error {
-	credentials := Credentials{Username: username, Password: password}
+func (b *Bot) signUp(username, password string, chatId int64) error {
+	credentials := Credentials{Username: username, Password: password, ChatId: chatId}
 	body, err := json.Marshal(credentials)
 	if err != nil {
 		return err
@@ -44,7 +43,11 @@ func (b *Bot) signUp(username, password string) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
-		return fmt.Errorf("failed to sign up, status code: %d", resp.StatusCode)
+		respBody, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return errors.New("ошибка")
+		}
+		return errors.New(string(respBody))
 	}
 
 	return nil

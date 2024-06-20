@@ -47,15 +47,12 @@ func (d Storage) GetEmployees() (*[]model.Employee, error) {
 	return &res, nil
 }
 
-func (d Storage) CreateUser(username, password string) error {
+func (d Storage) CreateUser(user model.User) error {
 	tx := d.db.Begin()
 	if tx.Error != nil {
 		return tx.Error
 	}
-	tx.Model(&model.User{}).Create(&model.User{
-		Username: username,
-		Password: password,
-	})
+	tx.Model(&model.User{}).Create(&user)
 	tx.Commit()
 	if tx.Error != nil {
 		return tx.Error
@@ -63,15 +60,20 @@ func (d Storage) CreateUser(username, password string) error {
 	return nil
 }
 
-func (d Storage) GetHashedPassword(username string) (string, error) {
+//func (d Storage) AddInfo(info model.Employee) error {
+//
+//}
+
+func (d Storage) GetHashedPassword(username string) (string, *int64, error) {
 	var hashedPassword string
-	err := d.db.Model(&model.User{}).Where("username = ?", username).Select("password").Scan(&hashedPassword).Error
+	var chatId *int64
+	err := d.db.Model(&model.User{}).Where("username = ?", username).Select("password, chat_id").Scan(&hashedPassword).Scan(chatId).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return "", nil
+			return "", nil, nil
 		}
-		return "", err
+		return "", nil, err
 	}
-	return hashedPassword, nil
+	return hashedPassword, chatId, nil
 
 }

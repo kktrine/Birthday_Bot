@@ -10,14 +10,12 @@ type Bot struct {
 	bot        *tgbotapi.BotAPI
 	updates    tgbotapi.UpdatesChannel
 	tokens     map[int64]string
-	states     map[int64]string
-	usernames  map[int64]string
-	passwords  map[int64]string
 }
 
 type Credentials struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
+	ChatId   int64  `json:"chatId"`
 }
 type AuthResponse struct {
 	Token string `json:"token"`
@@ -38,75 +36,69 @@ func NewBot(apiBaseURL string) *Bot {
 	if err != nil {
 		log.Panic(err)
 	}
-	return &Bot{apiBaseURL: apiBaseURL, bot: bot, updates: updates, tokens: make(map[int64]string), states: make(map[int64]string), usernames: make(map[int64]string), passwords: make(map[int64]string)}
+	return &Bot{apiBaseURL: apiBaseURL, bot: bot, updates: updates, tokens: make(map[int64]string)}
 }
 
 func (b *Bot) Start() {
-	flag := false
 	for update := range b.updates {
 		if update.Message == nil {
 			continue
 		}
-		var state string
 		id := update.Message.Chat.ID
-		state, ok := b.states[id]
-		if !ok {
-			state = "needUsername"
-			b.states[id] = state
-		}
 		switch update.Message.Command() {
 		case "start":
-			msg := tgbotapi.NewMessage(id, "Welcome! Please use /signin or /signup to get started.")
+			msg := tgbotapi.NewMessage(id, "Привет! Выбери команду:\n/signin\n/signup\n/employees")
 			b.bot.Send(msg)
-			flag = false
 		case "signin":
-			if state != "ok" {
-				b.waitForLoginPassword(id)
-				flag = true
+			user, password := b.getUsernamePassword(id)
+			if user != "" && password != "" {
+				b.handleSignIn(update, user, password)
 			} else {
-				b.handleSignIn(update)
-				flag = false
+				msg := tgbotapi.NewMessage(id, "Ошибка входа: данные не заполнены")
+				b.bot.Send(msg)
 			}
 		case "signup":
-			if state != "ok" {
-				b.waitForLoginPassword(id)
-				flag = true
+			user, password := b.getUsernamePassword(id)
+			if user != "" && password != "" {
+				b.handleSignUp(update, user, password)
 			} else {
-				b.handleSignUp(update)
-				flag = false
+				msg := tgbotapi.NewMessage(id, "Ошибка регистрации: данные не заполнены")
+				b.bot.Send(msg)
 			}
 		case "employees":
 			b.handleGetEmployees(update)
-			flag = false
 		default:
-			if !flag || state == "ok" {
-				msg := tgbotapi.NewMessage(id, "Неизвестная команда")
-				flag = false
-				b.bot.Send(msg)
-			} else if state == "needUsername" {
-				b.usernames[id] = update.Message.Text
-				b.states[id] = "needPassword"
-				msg := tgbotapi.NewMessage(id, "Введите пароль")
-				b.bot.Send(msg)
-				flag = true
-			} else {
-				b.passwords[id] = update.Message.Text
-				b.states[id] = "ok"
-				msg := tgbotapi.NewMessage(id, "Выберите команду")
-				b.bot.Send(msg)
-				flag = false
-			}
+			msg := tgbotapi.NewMessage(id, "Неизвестная команда")
+			b.bot.Send(msg)
 		}
 	}
 }
 
-func (b *Bot) waitForLoginPassword(id int64) {
-	switch b.states[id] {
-	case "needUsername":
-		msg := tgbotapi.NewMessage(id, "Введите логин")
-		b.bot.Send(msg)
-	case "needPassword":
-		msg := tgbotapi.NewMessage(id, "Введите пароль")
-		b.bot.Send(msg)
+func (b *Bot) getUsernamePassword(id int64) (string, string) {
+	username := ""
+	password := ""
+	msg := tgbotapi.NewMessage(id, "Введите имя пользователя или /exit, чтобы выйти")
+	b.bot.Send(msg)
+	for update := range b.updates {
+		if update.Message == nil {
+			continue
+		}
+		if update.Message.Command() == "exit" {
+			return username, password
+		} else if update.Message.Command() != "" {
+			msg := tgbotapi.NewMessage(id, "Неверная команда.\nВведите /exit, если хотите выйти")
+			b.bot.Send(msg)
+		}
+		if username == "" {
+			username = update.Message.Text
+			msg := tgbotapi.NewMessage(id, "Имя пользователя принято.\nВведите пароль или /exit, чтобы выйти")
+			b.bot.Send(msg)
+		} else {
+			password = update.Message.Text
+			msg := tgbotapi.NewMessage(id, "Пароль принят")
+			b.bot.Send(msg)
+			return username, password
+		}
 	}
+	return username, password
 }

@@ -27,13 +27,17 @@ func (h *Auth) Register(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	if len(user.Username) < 5 || len(user.Password) < 5 {
+		http.Error(w, "минимальная длина логина и пароля - 5 символов", http.StatusBadRequest)
+		return
+	}
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	user.Password = string(hashedPassword)
-	err = h.Db.CreateUser(user.Username, user.Password)
+	err = h.Db.CreateUser(user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -50,13 +54,16 @@ func (h *Auth) SignIn(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	hashedPassword, err := h.Db.GetHashedPassword(user.Username)
+	hashedPassword, chatId, err := h.Db.GetHashedPassword(user.Username)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 	err = bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(user.Password))
 	if err != nil {
-		http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+		http.Error(w, "Неверный пароль", http.StatusUnauthorized)
+	}
+	if user.ChatId != nil && chatId != nil && *user.ChatId != *chatId {
+		http.Error(w, "Невозможно войти с чужого устройства", http.StatusUnauthorized)
 	}
 	expirationTime := time.Now().Add(24 * time.Hour)
 	claim := &claims{
