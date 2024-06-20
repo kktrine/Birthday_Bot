@@ -15,8 +15,8 @@ import (
 
 var jwtKey = []byte("my_secret_key")
 
-func RunServer(address string) {
-	db := storage.New("host=localhost user=postgres password=postgres dbname=birthdays port=5432 sslmode=disable")
+func RunServer(address string, db *storage.Storage) {
+
 	authProcess := auth.Auth{JWTKey: jwtKey, Db: db}
 
 	router := mux.NewRouter()
@@ -33,25 +33,26 @@ func RunServer(address string) {
 	log.Fatal(http.ListenAndServe(address, router))
 }
 
-func RunBot(address string) {
+func RunBot(address string, db *storage.Storage) {
 	log.Println("Starting tg bot")
 	bot := tgBot.NewBot("http://" + address)
-	bot.Start()
+	bot.Start(db)
 }
 
 func main() {
 	address := "localhost:8080"
+	db := storage.New("host=localhost user=postgres password=postgres dbname=birthdays port=5432 sslmode=disable")
 	var wg sync.WaitGroup
 	wg.Add(2)
 
 	go func() {
 		defer wg.Done()
-		RunServer(address)
+		RunServer(address, db)
 	}()
 	time.Sleep(3 * time.Second)
 	go func() {
 		defer wg.Done()
-		RunBot(address)
+		RunBot(address, db)
 	}()
 
 	wg.Wait()

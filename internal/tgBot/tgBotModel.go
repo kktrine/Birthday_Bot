@@ -2,6 +2,7 @@ package tgBot
 
 import (
 	"birthday_bot/internal/model"
+	"birthday_bot/internal/storage"
 	tgbotapi "gopkg.in/telegram-bot-api.v4"
 	"log"
 	"strconv"
@@ -49,7 +50,8 @@ func NewBot(apiBaseURL string) *Bot {
 	return &Bot{apiBaseURL: apiBaseURL, bot: bot, updates: updates, tokens: make(map[int64]string)}
 }
 
-func (b *Bot) Start() {
+func (b *Bot) Start(db *storage.Storage) {
+	go b.periodSend(db)
 	for update := range b.updates {
 		if update.Message == nil {
 			continue
@@ -218,4 +220,18 @@ func (b *Bot) getIds(id int64) *model.Subscribe {
 		}
 	}
 	return &res
+}
+
+func (b *Bot) periodSend(db *storage.Storage) {
+	for {
+		now := time.Now()
+		next := time.Date(now.Year(), now.Month(), now.Day(), 10, 0, 0, 0, now.Location()).Add(24 * time.Hour)
+		pause := next.Sub(now)
+		time.Sleep(pause)
+		b.sendNotifications(time.Now(), db)
+	}
+}
+
+func (b *Bot) sendNotifications(db *storage.Storage) {
+
 }

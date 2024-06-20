@@ -6,6 +6,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+	"time"
 )
 
 type Storage struct {
@@ -128,5 +129,41 @@ func (d Storage) Subscribe(data model.Subscribe) error {
 		return err
 	}
 	return nil
+}
 
+func (d Storage) CheckBDays() *[]model.Message {
+	var bdays []model.Employee
+	today := time.Now().Format("2006-01-02")
+	err := d.db.Where("birth = ?", today).Select("user_id, name, surname").Find(&model.Employee{}).Error
+	if err != nil {
+		return nil
+	}
+	bdaysMap := make(map[int]struct {
+		name    string
+		surname string
+	})
+
+	var bdayIds []int
+	for _, employee := range bdays {
+		bdayIds = append(bdayIds, *employee.UserId)
+		bdaysMap[employee.Id] = struct {
+			name    string
+			surname string
+		}{name: employee.Name, surname: employee.Surname}
+	}
+	var subscribers []model.Subscription
+	err = d.db.Where("subscribed_at in ?", bdayIds).Select("user_id").Find(&subscribers).Error
+	if err != nil {
+		return nil
+	}
+	var subscribersIds []int
+	for _, sub := range subscribers {
+		subscribersIds = append(subscribersIds, sub.UserId)
+	}
+
+	var users []model.User
+	err = d.db.Model(&model.User{}).Where("id in ?", subscribersIds).Select("chat_id").Find(&users).Error
+	if err != nil {
+		return nil
+	}
 }
