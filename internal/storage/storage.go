@@ -3,7 +3,6 @@ package storage
 import (
 	"birthday_bot/internal/model"
 	"errors"
-	"github.com/jackc/pgconn"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -22,7 +21,7 @@ func New(cfg string) *Storage {
 	if err != nil {
 		panic("couldn't connect to database: " + err.Error())
 	}
-	db = db.Debug()
+	//db = db.Debug()
 
 	err = db.AutoMigrate(&model.Employee{}, &model.Subscription{}, &model.User{})
 	if err != nil {
@@ -123,17 +122,12 @@ func (d Storage) Subscribe(data model.Subscribe) error {
 		requests[i].SubscribedTo = id
 	}
 	err := tx.Create(requests).Error
-	var pgErr *pgconn.PgError
 	if err != nil {
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			return err
-		}
+		return err
 	}
 	tx.Commit()
-	if err != nil {
-		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
-			return err
-		}
+	if tx.Error != nil {
+		return tx.Error
 	}
 	return nil
 }

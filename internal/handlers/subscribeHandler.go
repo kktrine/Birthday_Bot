@@ -11,8 +11,12 @@ func SubscribeHandler(db *storage.Storage) func(http.ResponseWriter, *http.Reque
 	return func(w http.ResponseWriter, r *http.Request) {
 		var data model.Subscribe
 		err := json.NewDecoder(r.Body).Decode(&data)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+		if err != nil || data.SubscribeTo == nil || data.Id == nil || len(*data.SubscribeTo) == 0 {
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+			} else {
+				http.Error(w, "Some recovered fields are empty", http.StatusBadRequest)
+			}
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")

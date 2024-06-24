@@ -218,7 +218,7 @@ func (b *Bot) getIds(id int64) *model.Subscribe {
 			b.bot.Send(msg)
 		} else if res.Id == nil {
 			res.Id = &currentIdInt
-			msg := tgbotapi.NewMessage(id, "id принят.\nВведите id пользователя, на которого хотите подписаться или /exit, чтобы выйти")
+			msg := tgbotapi.NewMessage(id, "id принят.\nВведите id пользователя или /exit, чтобы выйти")
 			b.bot.Send(msg)
 		} else {
 			ids = append(ids, currentIdInt)

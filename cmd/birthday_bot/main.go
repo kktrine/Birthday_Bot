@@ -6,9 +6,14 @@ import (
 	"birthday_bot/internal/middleware"
 	"birthday_bot/internal/storage"
 	"birthday_bot/internal/tgBot"
+	"context"
+	"errors"
 	"github.com/gorilla/mux"
+	"github.com/joho/godotenv"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"sync"
 	"time"
 )
@@ -30,8 +35,34 @@ func RunServer(address string, db *storage.Storage) {
 	protected.HandleFunc("/subscribe", handlers.SubscribeHandler(db)).Methods("POST")
 	protected.HandleFunc("/unsubscribe", handlers.UnsubscribeHandler(db)).Methods("POST")
 
-	log.Println("Server is running on " + address)
-	log.Fatal(http.ListenAndServe(address, router))
+	server := &http.Server{
+		Addr:    address,
+		Handler: router,
+	}
+
+	// Канал для уведомления о завершении работы сервера
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt)
+
+	go func() {
+		log.Println("Server is running on " + address)
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("Error starting server: %v", err)
+		}
+	}()
+
+	<-stop
+
+	log.Println("Server is shutting down...")
+	_ = db.Stop()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(ctx); err != nil {
+		log.Fatalf("Server shutdown error: %v", err)
+	}
+
+	log.Println("Server stopped")
 }
 
 func RunBot(address string, db *storage.Storage) {
@@ -41,10 +72,14 @@ func RunBot(address string, db *storage.Storage) {
 }
 
 func main() {
-	address := "localhost:8080"
-	db := storage.New("host=localhost user=postgres password=postgres dbname=birthdays port=5432 sslmode=disable")
+	err := godotenv.Load("./env/.env")
+	if err != nil {
+		log.Fatalf("Error loading .env file: %v", err)
+	}
+	address := "localhost:" + os.Getenv("PORT")
+	db := storage.New(os.Getenv("POSTGRES"))
 	var wg sync.WaitGroup
-	wg.Add(2)
+	wg.Add(1)
 
 	go func() {
 		defer wg.Done()
@@ -52,7 +87,6 @@ func main() {
 	}()
 	time.Sleep(3 * time.Second)
 	go func() {
-		defer wg.Done()
 		RunBot(address, db)
 	}()
 

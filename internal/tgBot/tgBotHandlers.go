@@ -93,7 +93,7 @@ func (b *Bot) handleSubscribe(update tgbotapi.Update, sub model.Subscribe) {
 		return
 	}
 
-	msg := tgbotapi.NewMessage(id, "Подписки успешно добавили")
+	msg := tgbotapi.NewMessage(id, "Подписки успешно добавлены")
 	b.bot.Send(msg)
 }
 
@@ -112,6 +112,6 @@ func (b *Bot) handleUnSubscribe(update tgbotapi.Update, unsubscribe model.Subscr
 		return
 	}
 
-	msg := tgbotapi.NewMessage(id, "Подписки успешно добавили")
+	msg := tgbotapi.NewMessage(id, "Подписки успешно убраны")
 	b.bot.Send(msg)
 }
