@@ -232,8 +232,8 @@ func (b *Bot) getIds(id int64) *model.Subscribe {
 func (b *Bot) periodSend(db *storage.Storage) {
 	for {
 		now := time.Now()
-		//next := time.Date(now.Year(), now.Month(), now.Day(), 10, 0, 0, 0, now.Location()).Add(24 * time.Hour)
-		next := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), 0, 0, now.Location()).Add(1 * time.Minute)
+		next := time.Date(now.Year(), now.Month(), now.Day(), 10, 0, 0, 0, now.Location()).Add(24 * time.Hour)
+		//next := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), 0, 0, now.Location()).Add(1 * time.Minute)
 		pause := next.Sub(now)
 		time.Sleep(pause)
 		b.sendNotifications(db)
