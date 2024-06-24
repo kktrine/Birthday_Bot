@@ -3,9 +3,11 @@ package storage
 import (
 	"birthday_bot/internal/model"
 	"errors"
+	"github.com/jackc/pgconn"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+	"strconv"
 	"time"
 )
 
@@ -121,39 +123,39 @@ func (d Storage) Subscribe(data model.Subscribe) error {
 		requests[i].SubscribedTo = id
 	}
 	err := tx.Create(requests).Error
+	var pgErr *pgconn.PgError
 	if err != nil {
-		return err
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return err
+		}
 	}
 	tx.Commit()
-	if tx.Error != nil {
-		return err
+	if err != nil {
+		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+			return err
+		}
 	}
 	return nil
 }
 
-func (d Storage) CheckBDays() *[]model.Message {
+func (d Storage) CheckBDays() *map[int]model.Messages {
 	var bdays []model.Employee
-	today := time.Now().Format("2006-01-02")
-	err := d.db.Where("birth = ?", today).Select("user_id, name, surname").Find(&model.Employee{}).Error
-	if err != nil {
+	month := time.Now().Format("01")
+	day := strconv.Itoa(time.Now().Day())
+	err := d.db.Where("to_char(birth, 'MM') = ? and to_char(birth, 'DD') = ?", month, day).Select("user_id, name, surname").Find(&bdays).Error
+	if err != nil || len(bdays) == 0 {
 		return nil
 	}
-	bdaysMap := make(map[int]struct {
-		name    string
-		surname string
-	})
+	bdaysMap := make(map[int]string)
 
 	var bdayIds []int
 	for _, employee := range bdays {
-		bdayIds = append(bdayIds, *employee.UserId)
-		bdaysMap[employee.Id] = struct {
-			name    string
-			surname string
-		}{name: employee.Name, surname: employee.Surname}
+		bdayIds = append(bdayIds, employee.UserId)
+		bdaysMap[employee.UserId] = employee.Name + " " + employee.Surname
 	}
 	var subscribers []model.Subscription
-	err = d.db.Where("subscribed_at in ?", bdayIds).Select("user_id").Find(&subscribers).Error
-	if err != nil {
+	err = d.db.Where("subscribed_to in ?", bdayIds).Select("user_id, subscribed_to").Find(&subscribers).Error
+	if err != nil || len(subscribers) == 0 {
 		return nil
 	}
 	var subscribersIds []int
@@ -162,8 +164,35 @@ func (d Storage) CheckBDays() *[]model.Message {
 	}
 
 	var users []model.User
-	err = d.db.Model(&model.User{}).Where("id in ?", subscribersIds).Select("chat_id").Find(&users).Error
-	if err != nil {
+	err = d.db.Model(&model.User{}).Where("id in ? and chat_id is not null", subscribersIds).Select("id, chat_id").Find(&users).Error
+	if err != nil || len(users) == 0 {
 		return nil
 	}
+	res := make(map[int]model.Messages)
+	for _, user := range users {
+		res[user.Id] = model.Messages{ChatId: *user.ChatId, BdayPeople: make([]string, 0)}
+	}
+	for _, sub := range subscribers {
+		tmp, _ := res[sub.UserId]
+		tmp.BdayPeople = append(tmp.BdayPeople, bdaysMap[sub.SubscribedTo])
+		res[sub.UserId] = tmp
+	}
+	return &res
+
+}
+
+func (d Storage) UnSubscribe(data model.Subscribe) error {
+	tx := d.db.Begin()
+	err := tx.Where("user_id = ? and subscribed_to in (?)", *data.Id, *data.SubscribeTo).Delete(&model.Subscription{}).Error
+	if err != nil {
+		return err
+	}
+	err = tx.Commit().Error
+	if err != nil {
+		return err
+	}
+	if tx.Error != nil {
+		return tx.Error
+	}
+	return nil
 }

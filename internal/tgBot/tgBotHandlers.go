@@ -96,3 +96,22 @@ func (b *Bot) handleSubscribe(update tgbotapi.Update, sub model.Subscribe) {
 	msg := tgbotapi.NewMessage(id, "Подписки успешно добавили")
 	b.bot.Send(msg)
 }
+
+func (b *Bot) handleUnSubscribe(update tgbotapi.Update, unsubscribe model.Subscribe) {
+	token, ok := b.tokens[update.Message.Chat.ID]
+	if !ok {
+		msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Необходимо войти в аккаунт")
+		b.bot.Send(msg)
+		return
+	}
+	err := b.unsubscribe(unsubscribe, token)
+	id := update.Message.Chat.ID
+	if err != nil {
+		msg := tgbotapi.NewMessage(id, "Не удалось добавить информацию: "+err.Error())
+		b.bot.Send(msg)
+		return
+	}
+
+	msg := tgbotapi.NewMessage(id, "Подписки успешно добавили")
+	b.bot.Send(msg)
+}

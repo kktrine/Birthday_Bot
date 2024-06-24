@@ -95,7 +95,14 @@ func (b *Bot) Start(db *storage.Storage) {
 				msg := tgbotapi.NewMessage(id, "Ошибка: данные не заполнены")
 				b.bot.Send(msg)
 			}
-
+		case "unsubscribe":
+			ids := b.getIds(id)
+			if ids != nil {
+				b.handleUnSubscribe(update, *ids)
+			} else {
+				msg := tgbotapi.NewMessage(id, "Ошибка: данные не заполнены")
+				b.bot.Send(msg)
+			}
 		default:
 			msg := tgbotapi.NewMessage(id, "Неизвестная команда")
 			b.bot.Send(msg)
@@ -146,7 +153,7 @@ func (b *Bot) getInfo(id int64) *model.Employee {
 			msg := tgbotapi.NewMessage(id, "Неверная команда.\nВведите /exit, если хотите выйти")
 			b.bot.Send(msg)
 		}
-		if res.UserId == nil {
+		if res.UserId <= 0 {
 			idString := update.Message.Text
 			idInt, err := strconv.Atoi(idString)
 			if err != nil {
@@ -155,7 +162,7 @@ func (b *Bot) getInfo(id int64) *model.Employee {
 			} else {
 				msg := tgbotapi.NewMessage(id, "Id принят. Введите имя.\nВведите /exit, если хотите выйти")
 				b.bot.Send(msg)
-				res.UserId = &idInt
+				res.UserId = idInt
 			}
 		} else if res.Name == "" {
 			res.Name = update.Message.Text
@@ -225,7 +232,8 @@ func (b *Bot) getIds(id int64) *model.Subscribe {
 func (b *Bot) periodSend(db *storage.Storage) {
 	for {
 		now := time.Now()
-		next := time.Date(now.Year(), now.Month(), now.Day(), 10, 0, 0, 0, now.Location()).Add(24 * time.Hour)
+		//next := time.Date(now.Year(), now.Month(), now.Day(), 10, 0, 0, 0, now.Location()).Add(24 * time.Hour)
+		next := time.Date(now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), 0, 0, now.Location()).Add(1 * time.Minute)
 		pause := next.Sub(now)
 		time.Sleep(pause)
 		b.sendNotifications(db)
@@ -233,5 +241,14 @@ func (b *Bot) periodSend(db *storage.Storage) {
 }
 
 func (b *Bot) sendNotifications(db *storage.Storage) {
-
+	messages := db.CheckBDays()
+	if messages == nil {
+		return
+	}
+	for _, message := range *messages {
+		for _, person := range message.BdayPeople {
+			msg := tgbotapi.NewMessage(message.ChatId, "Today is "+person+"'s Birthday!")
+			b.bot.Send(msg)
+		}
+	}
 }

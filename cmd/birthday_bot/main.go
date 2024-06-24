@@ -28,6 +28,7 @@ func RunServer(address string, db *storage.Storage) {
 	protected.HandleFunc("/employees", handlers.GetEmployeesHandler(db)).Methods("GET")
 	protected.HandleFunc("/info", handlers.PostInfoHandler(db)).Methods("POST")
 	protected.HandleFunc("/subscribe", handlers.SubscribeHandler(db)).Methods("POST")
+	protected.HandleFunc("/unsubscribe", handlers.UnsubscribeHandler(db)).Methods("POST")
 
 	log.Println("Server is running on " + address)
 	log.Fatal(http.ListenAndServe(address, router))

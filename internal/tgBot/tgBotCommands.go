@@ -125,3 +125,26 @@ func (b *Bot) subscribe(sub model.Subscribe, token string) error {
 	}
 	return nil
 }
+
+func (b *Bot) unsubscribe(unsubscribe model.Subscribe, token string) error {
+	bodyReq, err := json.Marshal(unsubscribe)
+	if err != nil {
+		return err
+	}
+	client := &http.Client{}
+	req, err := http.NewRequest("POST", b.apiBaseURL+"/api/unsubscribe", bytes.NewBuffer(bodyReq))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", token)
+
+	resp, err := client.Do(req)
+	defer resp.Body.Close()
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != 200 {
+		return errors.New(resp.Status)
+	}
+	return nil
+}
